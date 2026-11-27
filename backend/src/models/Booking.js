@@ -35,6 +35,10 @@ const bookingSchema = new Schema(
     cancelReason: { type: String, default: '' },
     payment: { type: Schema.Types.ObjectId, ref: 'Payment' },
     reviewed: { type: Boolean, default: false },
+    clientReviewed: { type: Boolean, default: false },
+    disputeOpen: { type: Boolean, default: false },
+    providerLocation: { type: pointSchema, default: undefined },
+    providerLocationAt: Date,
   },
   { timestamps: true }
 );
@@ -60,6 +64,8 @@ export function serializeBooking(b, viewerId) {
       city: u.city,
       ratingAvg: u.ratingAvg,
       ratingCount: u.ratingCount,
+      clientRatingAvg: u.clientRatingAvg,
+      clientRatingCount: u.clientRatingCount,
       phone: withPhone ? u.phone : undefined,
     };
   };
@@ -87,8 +93,18 @@ export function serializeBooking(b, viewerId) {
     cancelledAt: o.cancelledAt,
     cancelReason: o.cancelReason,
     reviewed: o.reviewed,
+    clientReviewed: o.clientReviewed,
+    disputeOpen: o.disputeOpen,
     createdAt: o.createdAt,
   };
+  // Live position is only shared with the person who hired, and only while the job is active.
+  if (isClient && showPhone && o.providerLocation?.coordinates) {
+    out.providerLocation = {
+      lat: o.providerLocation.coordinates[1],
+      lng: o.providerLocation.coordinates[0],
+      updatedAt: o.providerLocationAt,
+    };
+  }
   if (isClient) {
     if (o.status === BOOKING_STATUS.CONFIRMED) out.startOtp = o.startOtp;
     if (o.status === BOOKING_STATUS.IN_PROGRESS) out.endOtp = o.endOtp;

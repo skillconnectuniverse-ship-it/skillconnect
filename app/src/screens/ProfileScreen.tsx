@@ -143,6 +143,18 @@ export default function ProfileScreen({ userIdOverride }: { userIdOverride?: str
             {profile.city || profile.country ? '  ·  ' : ''}On SkillConnect since {memberSince(profile.createdAt)}
           </Text>
 
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 }}>
+            {([[profile.emailVerified, 'Email verified'], [profile.phoneVerified, 'Phone verified'], [profile.kycVerified, 'ID verified']] as const)
+              .filter(([ok]) => ok)
+              .map(([, label]) => (
+                <View key={label} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
+                  <Ionicons name="shield-checkmark" size={15} color={colors.success} />
+                  <Text style={{ color: colors.success, fontSize: 12, fontWeight: '700', marginLeft: 3 }}>{label}</Text>
+                </View>
+              ))}
+            {profile.clientRatingCount ? <Text style={{ color: colors.muted, fontSize: 12 }}>As a client: {profile.clientRatingAvg.toFixed(1)} stars ({profile.clientRatingCount})</Text> : null}
+          </View>
+
           <Pressable disabled={!isSelf} onPress={() => setStatusOpen(true)} style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
             <StatusPill status={profile.status} note={profile.statusNote} />
             {isSelf ? <Ionicons name="chevron-down" size={16} color={colors.muted} style={{ marginLeft: 6 }} /> : null}
@@ -168,11 +180,23 @@ export default function ProfileScreen({ userIdOverride }: { userIdOverride?: str
             )}
           </View>
           {isSelf ? (
-            <View style={{ flexDirection: 'row', marginTop: 8 }}>
-              <Button title="Add post" variant="outline" icon="add" onPress={() => nav.navigate('CreatePost')} style={{ flex: 1, marginRight: 8 }} />
-              <Button title="Log out" variant="outline" icon="log-out-outline" onPress={() => logout()} style={{ flex: 1 }} />
-            </View>
-          ) : null}
+            <>
+              <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                <Button title="Add post" variant="outline" icon="add" onPress={() => nav.navigate('CreatePost')} style={{ flex: 1, marginRight: 8 }} />
+                <Button title="Wallet" variant="outline" icon="wallet-outline" onPress={() => nav.navigate('Wallet')} style={{ flex: 1 }} />
+              </View>
+              <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                <Button title="Support" variant="outline" icon="help-buoy-outline" onPress={() => nav.navigate('Support')} style={{ flex: 1, marginRight: 8 }} />
+                <Button title="Log out" variant="outline" icon="log-out-outline" onPress={() => logout()} style={{ flex: 1 }} />
+              </View>
+              {!profile.emailVerified || !profile.phoneVerified ? <Button title="Verify email / phone" icon="shield-checkmark-outline" onPress={() => nav.navigate('Verify')} style={{ marginTop: 8 }} /> : null}
+              {me?.role === 'admin' ? <Button title="Admin panel" variant="danger" icon="construct-outline" onPress={() => nav.navigate('Admin')} style={{ marginTop: 8 }} /> : null}
+            </>
+          ) : (
+            <Pressable onPress={() => nav.navigate('Report', { userId: profile.id, name: profile.name })} style={{ marginTop: 12, alignItems: 'center' }}>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>Report this user</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border }}>

@@ -9,10 +9,11 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (input: { name: string; email: string; password: string; phone?: string; city?: string }) => Promise<void>;
+  register: (input: { name: string; email: string; password: string; phone?: string; city?: string }) => Promise<{ devCode?: string }>;
   logout: () => Promise<void>;
   setUser: (u: User) => void;
   refreshUser: () => Promise<void>;
+  devEmailCode: string | null;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -20,6 +21,7 @@ const Ctx = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [devEmailCode, setDevEmailCode] = useState<string | null>(null);
 
   const startSession = useCallback(async (token: string, u: User) => {
     setAuthToken(token);
@@ -61,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       loading,
+      devEmailCode,
       logout,
       setUser,
       login: async (email, password) => {
@@ -68,15 +71,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await startSession(r.token, r.user);
       },
       register: async (input) => {
-        const r = await api.post<{ token: string; user: User }>('/auth/register', input);
+        const r = await api.post<{ token: string; user: User; devCode?: string }>('/auth/register', input);
         await startSession(r.token, r.user);
+        setDevEmailCode(r.devCode ?? null);
+        return { devCode: r.devCode };
       },
       refreshUser: async () => {
         const { user: u } = await api.get<{ user: User }>('/users/me');
         setUser(u);
       },
     }),
-    [user, loading, logout, startSession]
+    [user, loading, logout, startSession, devEmailCode]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api';
+import { useAuth } from '../auth';
 import { useNav } from '../nav';
 import { colors } from '../theme';
 import { Avatar, Button, Empty, Loading, StatusDot } from '../ui';
@@ -56,6 +57,7 @@ export function PostCard({ post, onLike }: { post: Post; onLike: (p: Post) => vo
 
 export default function FeedScreen() {
   const nav = useNav();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<Post[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -125,6 +127,13 @@ export default function FeedScreen() {
           ) : null}
         </Pressable>
       </View>
+      {!user?.emailVerified ? (
+        <Pressable onPress={() => nav.navigate('Verify')} style={{ backgroundColor: '#fef3c7', paddingVertical: 8, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="shield-outline" size={16} color="#b45309" />
+          <Text style={{ color: '#b45309', fontWeight: '700', marginLeft: 6, flex: 1 }}>Verify your email to hire people and build trust</Text>
+          <Ionicons name="chevron-forward" size={16} color="#b45309" />
+        </Pressable>
+      ) : null}
       {loading ? (
         <Loading />
       ) : (

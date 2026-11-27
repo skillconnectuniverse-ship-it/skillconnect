@@ -39,6 +39,12 @@ export function formatDuration(ms: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
+export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
 export function planLabel(plan: PlanKey, quantity: number): string {
   const unit = PLANS.find((p) => p.key === plan)?.unit ?? plan;
   return `${quantity} ${unit}${quantity > 1 ? 's' : ''}`;

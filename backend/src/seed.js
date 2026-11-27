@@ -24,6 +24,7 @@ for (const [i, p] of people.entries()) {
     name: p.name,
     email,
     password,
+    emailVerified: true,
     phone: `+91900000000${i}`,
     city: p.city,
     country: 'India',

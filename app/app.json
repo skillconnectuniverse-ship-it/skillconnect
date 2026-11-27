@@ -16,7 +16,10 @@
     },
     "android": {
       "package": "com.skillconnect.app",
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -25,9 +28,20 @@
     "plugins": [
       "expo-secure-store",
       "expo-status-bar",
-      ["expo-location", { "locationWhenInUsePermission": "SkillConnect uses your location to find people near you and to share your work location with the person you hire." }],
-      ["expo-image-picker", { "photosPermission": "SkillConnect needs photo access so you can upload your profile and work photos." }],
-      "expo-notifications"
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SkillConnect uses your location to find people near you and to share your work location with the person you hire."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SkillConnect needs photo access so you can upload your profile and work photos."
+        }
+      ],
+      "expo-notifications",
+      ["@config-plugins/react-native-webrtc", { "microphonePermission": "SkillConnect uses the microphone for calls with the person you hired or who hired you.", "cameraPermission": "Camera is not used." }]
     ]
   }
 }

@@ -45,6 +45,30 @@ const userSchema = new Schema(
     // Bayesian average so one 5-star review does not outrank hundreds of 4.9s.
     ratingScore: { type: Number, default: 3.5, index: true },
     completedJobs: { type: Number, default: 0 },
+    clientRatingSum: { type: Number, default: 0 },
+    clientRatingCount: { type: Number, default: 0 },
+    clientRatingAvg: { type: Number, default: 0 },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    emailVerified: { type: Boolean, default: false },
+    phoneVerified: { type: Boolean, default: false },
+    kyc: {
+      status: { type: String, enum: ['none', 'pending', 'verified', 'rejected'], default: 'none' },
+      legalName: { type: String, default: '' },
+      idType: { type: String, default: '' },
+      idLast4: { type: String, default: '' },
+      idNumberEnc: { type: String, default: '' },
+      frontMedia: { type: Schema.Types.ObjectId, ref: 'Media' },
+      selfieMedia: { type: Schema.Types.ObjectId, ref: 'Media' },
+      submittedAt: Date,
+      reviewedAt: Date,
+      rejectReason: { type: String, default: '' },
+    },
+    payoutMethod: {
+      kind: { type: String, enum: ['bank', 'upi'] },
+      holderName: { type: String, default: '' },
+      label: { type: String, default: '' },
+      enc: { type: String, default: '' },
+    },
     pushToken: { type: String, default: '', select: false },
     isActive: { type: Boolean, default: true },
   },
@@ -71,6 +95,11 @@ export function publicUser(u) {
     ratingCount: o.ratingCount,
     ratingScore: o.ratingScore,
     completedJobs: o.completedJobs,
+    clientRatingAvg: o.clientRatingAvg,
+    clientRatingCount: o.clientRatingCount,
+    emailVerified: o.emailVerified,
+    phoneVerified: o.phoneVerified,
+    kycVerified: o.kyc?.status === 'verified',
     createdAt: o.createdAt,
     coords: o.location?.coordinates ? { lng: o.location.coordinates[0], lat: o.location.coordinates[1] } : null,
   };
@@ -78,7 +107,14 @@ export function publicUser(u) {
 
 export function privateUser(u) {
   const o = u.toObject ? u.toObject() : u;
-  return { ...publicUser(o), email: o.email, phone: o.phone };
+  return {
+    ...publicUser(o),
+    email: o.email,
+    phone: o.phone,
+    role: o.role,
+    kyc: { status: o.kyc?.status || 'none', legalName: o.kyc?.legalName || '', rejectReason: o.kyc?.rejectReason || '' },
+    payoutMethod: o.payoutMethod?.kind ? { kind: o.payoutMethod.kind, holderName: o.payoutMethod.holderName, label: o.payoutMethod.label } : null,
+  };
 }
 
 export const User = mongoose.model('User', userSchema);

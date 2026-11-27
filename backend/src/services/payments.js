@@ -119,17 +119,22 @@ export async function markPaid(paymentId, gatewayPaymentId) {
   return true;
 }
 
-export async function refundPayment(payment) {
+// Refunds the remaining amount by default; pass amountMinor for a partial refund.
+export async function refundPayment(payment, amountMinor) {
   if (payment.status !== 'paid') return null;
+  const remaining = payment.amountMinor - (payment.refundedMinor || 0);
+  const amount = Math.min(amountMinor ?? remaining, remaining);
+  if (amount <= 0) return null;
   let refundId = `demo_${Date.now()}`;
   if (payment.gateway === 'razorpay') {
-    const r = await razorpay.payments.refund(payment.gatewayPaymentId, { speed: 'normal' });
+    const r = await razorpay.payments.refund(payment.gatewayPaymentId, { amount, speed: 'normal' });
     refundId = r.id;
   } else if (payment.gateway === 'stripe') {
-    const r = await stripe.refunds.create({ payment_intent: payment.gatewayPaymentId });
+    const r = await stripe.refunds.create({ payment_intent: payment.gatewayPaymentId, amount });
     refundId = r.id;
   }
-  payment.status = 'refunded';
+  payment.refundedMinor = (payment.refundedMinor || 0) + amount;
+  if (payment.refundedMinor >= payment.amountMinor) payment.status = 'refunded';
   payment.refundId = refundId;
   await payment.save();
   return refundId;

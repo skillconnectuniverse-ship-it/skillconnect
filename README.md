@@ -25,6 +25,27 @@ app/       Expo (React Native + React Native Web) - iOS, Android and website
 
 Phone numbers are private: they are only returned to the two people in an active (confirmed / in progress) booking.
 
+### Trust, money and support features
+
+| Area | How it works |
+| --- | --- |
+| Email / phone verification | 6-digit codes (15 min, 5 attempts). Email via any SMTP (`SMTP_*`), SMS via Twilio (`TWILIO_*`). When SMTP is configured, unverified users cannot hire. Without providers, development responses show the code (`devCode`) |
+| Forgot password | Login -> "Forgot password?" -> code by email -> new password. Never reveals whether an email exists |
+| Wallet + withdrawals | Earnings are credited when a job completes and become withdrawable after `PAYOUT_HOLD_HOURS` (default 24h) or once a complaint is settled. Withdrawal needs verified KYC and a bank/UPI whose holder name matches the KYC name. Bank/ID numbers are AES-256-GCM encrypted at rest |
+| KYC | User uploads ID photo (+ optional selfie). Images are private (never on the public media URL); admins view them through 15-minute signed links |
+| Payouts | An admin sends the money from the business bank/UPI, then records the UTR in the Admin panel (Payouts) -> user is notified. Automatic payouts would need RazorpayX/Stripe Connect activation on your business account |
+| In-app calling | Voice calls (WebRTC, peer-to-peer; signalling over Socket.IO) between the two people in an active booking. Works in the browser and in iOS/Android **development/production builds**. Expo Go cannot load WebRTC, so there the "Phone" button (dialer) is used. Add a TURN server in `ICE_SERVERS` for users behind strict NATs |
+| Live location | The hired person's app shares position every ~10 s while the booking is active (app open); the client sees a map, distance and last-updated time |
+| Rate the client | After completion the hired person can rate the client; shown on the client's profile and on future booking requests |
+| Complaints / disputes | "Report a problem" on a booking (holds the provider's earnings) or "Report this user" on a profile. Both sides can reply in a thread; an admin decides: full refund, partial refund, release to provider, or dismiss. Refunds go back through Razorpay/Stripe and the provider's earnings are adjusted |
+| Admin panel | Profile -> Admin panel (admins only): dashboard, complaints, KYC review, payouts, users (ban/unban) |
+
+Make someone an admin (run once, pointing at your database):
+
+```bash
+cd backend && MONGODB_URI="<your atlas string>" npm run make-admin -- you@example.com
+```
+
 ## Run locally
 
 ### 1. Backend
@@ -77,7 +98,7 @@ Free tier notes: Render's free service sleeps after ~15 min idle (first request 
 
 ## Notes and next steps
 
-- Platform fee is `PLATFORM_FEE_PERCENT` (default 10%) and is recorded on every booking (`platformFeeMinor`, `providerEarningMinor`). Paying providers out (Razorpay Route / Stripe Connect) and KYC are not implemented yet.
-- Calls use the phone dialer. In-app/masked calling (Twilio, Agora) can replace the `Call` button later.
+- Platform fee is `PLATFORM_FEE_PERCENT` (default 10%) and is recorded on every booking (`platformFeeMinor`, `providerEarningMinor`).
+- Live location only updates while the hired person's app is open in the foreground (background tracking needs a custom native build).
 - Web "address to map" fallback uses OpenStreetMap Nominatim (fair-use); use Google Geocoding for production traffic.
 - Razorpay is offered for INR only; other currencies go through Stripe.

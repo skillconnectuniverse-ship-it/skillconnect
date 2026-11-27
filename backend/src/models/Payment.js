@@ -16,6 +16,7 @@ const paymentSchema = new Schema(
     gatewayPaymentId: String,
     paidAt: Date,
     refundId: String,
+    refundedMinor: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

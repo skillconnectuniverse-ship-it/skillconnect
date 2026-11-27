@@ -4,7 +4,7 @@ import { useAuth } from '../auth';
 import { useNav } from '../nav';
 import { colors } from '../theme';
 import { Button, Input, showAlert } from '../ui';
-import { ApiError } from '../api';
+import { ApiError, api } from '../api';
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -43,11 +43,71 @@ export function LoginScreen() {
       <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="you@example.com" />
       <Input label="Password" value={password} onChangeText={setPassword} secureTextEntry placeholder="Your password" onSubmitEditing={submit} />
       <Button title="Log in" onPress={submit} loading={busy} disabled={!email || !password} />
+      <Pressable onPress={() => nav.navigate('ForgotPassword')} style={{ marginTop: 14, alignItems: 'center' }}>
+        <Text style={{ color: colors.primary, fontWeight: '600' }}>Forgot password?</Text>
+      </Pressable>
       <Pressable onPress={() => nav.navigate('Register')} style={{ marginTop: 18, alignItems: 'center' }}>
         <Text style={{ color: colors.muted }}>
           New here? <Text style={{ color: colors.primary, fontWeight: '700' }}>Create an account</Text>
         </Text>
       </Pressable>
+    </Shell>
+  );
+}
+
+export function ForgotPasswordScreen() {
+  const nav = useNav();
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [sent, setSent] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const send = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ devCode?: string }>('/auth/forgot', { email: email.trim() });
+      setDevCode(r.devCode ?? null);
+      setSent(true);
+    } catch (e) {
+      showAlert('Could not send code', (e as ApiError).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reset = async () => {
+    setBusy(true);
+    try {
+      await api.post('/auth/reset', { email: email.trim(), code: code.trim(), password });
+      showAlert('Password changed', 'You can now log in with your new password.');
+      nav.navigate('Login');
+    } catch (e) {
+      showAlert('Could not reset', (e as ApiError).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Shell>
+      <Text style={{ color: colors.muted, marginBottom: 14 }}>Enter your account email. We will send a 6-digit code to reset your password.</Text>
+      <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" editable={!sent} />
+      {!sent ? (
+        <Button title="Send code" onPress={send} loading={busy} disabled={!email} />
+      ) : (
+        <>
+          <Text style={{ color: colors.success, marginBottom: 10 }}>If the email is registered, a code is on its way (valid 15 minutes).</Text>
+          {devCode ? <Text style={{ color: colors.muted, marginBottom: 10 }}>Test mode (no email service configured) - your code: {devCode}</Text> : null}
+          <Input label="6-digit code" value={code} onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} />
+          <Input label="New password (min 8 characters)" value={password} onChangeText={setPassword} secureTextEntry />
+          <Button title="Change password" onPress={reset} loading={busy} disabled={code.length !== 6 || password.length < 8} />
+          <Pressable onPress={send} style={{ marginTop: 14, alignItems: 'center' }}>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>Send the code again</Text>
+          </Pressable>
+        </>
+      )}
     </Shell>
   );
 }

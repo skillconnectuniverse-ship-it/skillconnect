@@ -15,6 +15,11 @@ async function sendExpoPush(token, title, body, data) {
   }
 }
 
+export async function notifyAdmins(payload) {
+  const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
+  await Promise.all(admins.map((a) => notify(a._id, payload)));
+}
+
 // Stores an in-app notification (unless store=false), emits it over the socket and pushes to the device.
 export async function notify(userId, { type = 'info', title, body = '', data = {}, store = true }) {
   let doc = null;

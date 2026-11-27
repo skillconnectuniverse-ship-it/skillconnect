@@ -6,8 +6,11 @@ import { RootStackParamList, useNav } from '../nav';
 import { BOOKING_BADGE, colors } from '../theme';
 import { Avatar, Button, Card, confirmAction, Input, Loading, showAlert, Stars } from '../ui';
 import { Booking } from '../types';
-import { callNumber, formatDuration, formatMoney, openDirections, planLabel } from '../utils';
+import { callNumber, distanceKm, formatDuration, formatMoney, openDirections, planLabel, timeAgo } from '../utils';
 import { useSocketEvent } from '../realtime';
+import { useCall } from '../call/CallProvider';
+import { useShareLocation } from '../liveLocation';
+import LiveMap from '../LiveMap';
 
 export default function BookingDetailScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, 'BookingDetail'>>();
@@ -19,6 +22,9 @@ export default function BookingDetailScreen() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [now, setNow] = useState(Date.now());
+  const { supported: inAppCalls, startCall } = useCall();
+  const [crating, setCrating] = useState(5);
+  const [ccomment, setCcomment] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -40,11 +46,16 @@ export default function BookingDetailScreen() {
     if (p.bookingId === params.bookingId) load();
   });
 
+  useSocketEvent<{ bookingId: string; lat: number; lng: number; updatedAt: string }>('booking:location', (p) => {
+    if (p.bookingId === params.bookingId) setB((prev) => (prev ? { ...prev, providerLocation: { lat: p.lat, lng: p.lng, updatedAt: p.updatedAt } } : prev));
+  });
+  useShareLocation(params.bookingId, b?.role === 'provider' && (b.status === 'confirmed' || b.status === 'in_progress'));
+
   useEffect(() => {
-    if (b?.status !== 'in_progress') return;
+    if (b?.status !== 'in_progress' && !b?.providerLocation) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [b?.status]);
+  }, [b?.status, b?.providerLocation]);
 
   if (!b) return <Loading />;
 
@@ -101,15 +112,32 @@ export default function BookingDetailScreen() {
               <Stars value={other.ratingAvg} />
               <Text style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}>{other.city}</Text>
             </View>
+            {!isClient && other.clientRatingCount ? (
+              <Text style={{ color: colors.muted, fontSize: 12 }}>As a client: {other.clientRatingAvg?.toFixed(1)} stars from {other.clientRatingCount} jobs</Text>
+            ) : null}
           </View>
         </View>
         {b.status !== 'pending_payment' ? (
-          <View style={{ flexDirection: 'row', marginTop: 12 }}>
-            {active && other.phone ? <Button title="Call" icon="call" variant="success" onPress={() => callNumber(other.phone!)} style={{ flex: 1, marginRight: 8 }} /> : null}
-            <Button title="Message" icon="chatbubble" variant="outline" onPress={() => nav.navigate('Chat', { userId: other.id, name: other.name })} style={{ flex: 1 }} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, gap: 8 }}>
+            {active && inAppCalls ? <Button title="Call in app" icon="call" variant="success" onPress={() => startCall(b.id, { id: other.id, name: other.name, avatar: other.avatar })} style={{ flexGrow: 1 }} /> : null}
+            {active && other.phone ? <Button title={inAppCalls ? 'Phone' : 'Call'} icon="phone-portrait-outline" variant={inAppCalls ? 'outline' : 'success'} onPress={() => callNumber(other.phone!)} style={{ flexGrow: 1 }} /> : null}
+            <Button title="Message" icon="chatbubble" variant="outline" onPress={() => nav.navigate('Chat', { userId: other.id, name: other.name })} style={{ flexGrow: 1 }} />
           </View>
         ) : null}
       </Card>
+
+      {isClient && active && b.providerLocation ? (
+        <Card>
+          <Text style={{ fontWeight: '800', marginBottom: 2 }}>{other.name} is on the way</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 8 }}>
+            {b.coords ? `${distanceKm(b.providerLocation, b.coords).toFixed(1)} km from your location · ` : ''}updated {timeAgo(b.providerLocation.updatedAt)}
+          </Text>
+          <LiveMap marker={b.providerLocation} other={b.coords ?? undefined} />
+          <Button title="Open in Google Maps" icon="navigate" variant="outline" onPress={() => openDirections(b.providerLocation!.lat, b.providerLocation!.lng)} style={{ marginTop: 10 }} />
+        </Card>
+      ) : null}
+      {isClient && active && !b.providerLocation ? <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 10 }}>Live location appears here once {other.name} opens this booking in their app.</Text> : null}
+      {!isClient && active ? <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 10 }}>Your live location is shared with {other.name} while this booking is active (keep this screen open).</Text> : null}
 
       {b.status !== 'pending_payment' && (b.address || b.coords) ? (
         <Card>
@@ -179,12 +207,24 @@ export default function BookingDetailScreen() {
             </View>
           ) : null}
           {isClient && b.reviewed ? <Text style={{ color: colors.success, marginTop: 10 }}>Thanks for your review!</Text> : null}
+          {!isClient && !b.clientReviewed ? (
+            <View style={{ marginTop: 14 }}>
+              <Text style={{ fontWeight: '700', marginBottom: 6 }}>Rate {other.name} as a client</Text>
+              <Stars value={crating} size={32} onChange={setCrating} />
+              <Input value={ccomment} onChangeText={setCcomment} multiline placeholder="How was it working with them? (optional)" maxLength={1000} style={{ marginTop: 10 }} />
+              <Button title="Submit rating" loading={busy} onPress={() => act(() => api.post(`/bookings/${b.id}/review-client`, { rating: crating, comment: ccomment }).then(() => ({ booking: { ...b, clientReviewed: true } })), 'Could not submit')} />
+            </View>
+          ) : null}
+          {!isClient && b.clientReviewed ? <Text style={{ color: colors.success, marginTop: 10 }}>Thanks, your rating was saved.</Text> : null}
         </Card>
       ) : null}
 
       {b.status === 'cancelled' ? <Card><Text style={{ color: colors.muted }}>This booking was cancelled{b.cancelReason ? `: ${b.cancelReason}` : '.'} Any payment is refunded to the original method.</Text></Card> : null}
 
       {b.status === 'pending_payment' || b.status === 'confirmed' ? <Button title="Cancel booking" variant="outline" onPress={cancel} /> : null}
+
+      {b.disputeOpen ? <Text style={{ color: '#b45309', marginTop: 12, fontWeight: '700' }}>A complaint is open on this booking. Our team is reviewing it.</Text> : null}
+      {active || b.status === 'completed' ? <Button title="Report a problem" variant="outline" icon="flag-outline" onPress={() => nav.navigate('Report', { bookingId: b.id, name: other.name })} style={{ marginTop: 12 }} /> : null}
     </ScrollView>
   );
 }

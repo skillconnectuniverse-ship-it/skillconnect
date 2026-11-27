@@ -27,6 +27,14 @@ export interface User {
   createdAt: string;
   coords: { lat: number; lng: number } | null;
   distanceKm?: number | null;
+  clientRatingAvg: number;
+  clientRatingCount: number;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  kycVerified: boolean;
+  role?: 'user' | 'admin';
+  kyc?: { status: KycStatus; legalName: string; rejectReason: string };
+  payoutMethod?: { kind: 'bank' | 'upi'; holderName: string; label: string } | null;
   email?: string;
   phone?: string;
 }
@@ -60,6 +68,8 @@ export interface BookingParty {
   city: string;
   ratingAvg: number;
   ratingCount: number;
+  clientRatingAvg?: number;
+  clientRatingCount?: number;
   phone?: string;
 }
 
@@ -85,6 +95,9 @@ export interface Booking {
   endedAt?: string;
   cancelReason?: string;
   reviewed: boolean;
+  clientReviewed: boolean;
+  disputeOpen: boolean;
+  providerLocation?: { lat: number; lng: number; updatedAt: string };
   createdAt: string;
   startOtp?: string;
   endOtp?: string;
@@ -118,4 +131,30 @@ export interface AppNotification {
 export interface Gateway {
   id: 'razorpay' | 'stripe' | 'demo';
   label: string;
+}
+
+export type KycStatus = 'none' | 'pending' | 'verified' | 'rejected';
+
+export interface WalletData {
+  balances: { currency: string; availableMinor: number; pendingMinor: number }[];
+  minPayoutMinor: number;
+  holdHours: number;
+  kyc: { status: KycStatus; legalName: string; idType: string; idLast4: string; rejectReason: string };
+  payoutMethod: { kind: 'bank' | 'upi'; holderName: string; label: string } | null;
+  entries: { id: string; kind: string; amountMinor: number; currency: string; note: string; availableAt: string; held: boolean; createdAt: string; bookingId?: string }[];
+  payouts: { id: string; amountMinor: number; currency: string; method: string; destinationLabel: string; status: 'requested' | 'paid' | 'rejected'; txnRef: string; adminNote: string; createdAt: string }[];
+}
+
+export interface Complaint {
+  id: string;
+  type: 'dispute' | 'report';
+  category: string;
+  description: string;
+  status: 'open' | 'resolved' | 'dismissed';
+  bookingId?: string;
+  raisedBy: { id: string; name?: string };
+  against: { id: string; name?: string };
+  messages: { id: string; from: string; isAdmin: boolean; text: string; createdAt: string }[];
+  resolution: { action: string; refundMinor: number; note?: string; at: string } | null;
+  createdAt: string;
 }

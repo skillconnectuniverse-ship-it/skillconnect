@@ -7,7 +7,12 @@ import { useAuth } from './auth';
 import { colors } from './theme';
 import { Loading } from './ui';
 import { RootStackParamList, TabParamList } from './nav';
-import { LoginScreen, RegisterScreen } from './screens/AuthScreens';
+import { LoginScreen, RegisterScreen, ForgotPasswordScreen } from './screens/AuthScreens';
+import VerifyScreen from './screens/VerifyScreen';
+import WalletScreen from './screens/WalletScreen';
+import KycScreen from './screens/KycScreen';
+import { ReportScreen, SupportScreen, ComplaintScreen } from './screens/SupportScreens';
+import AdminScreen from './screens/AdminScreen';
 import FeedScreen from './screens/FeedScreen';
 import ExploreScreen from './screens/ExploreScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -67,6 +72,7 @@ export default function Navigation() {
           <>
             <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create account' }} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset password' }} />
           </>
         ) : (
           <>
@@ -80,6 +86,13 @@ export default function Navigation() {
             <Stack.Screen name="BookingDetail" component={BookingDetailScreen} options={{ title: 'Booking' }} />
             <Stack.Screen name="Chat" component={ChatScreen} options={({ route }) => ({ title: route.params.name })} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
+            <Stack.Screen name="Verify" component={VerifyScreen} options={{ title: 'Verify account' }} />
+            <Stack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet & withdrawals' }} />
+            <Stack.Screen name="Kyc" component={KycScreen} options={{ title: 'Identity verification' }} />
+            <Stack.Screen name="Report" component={ReportScreen} options={{ title: 'Report a problem' }} />
+            <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Support & complaints' }} />
+            <Stack.Screen name="Complaint" component={ComplaintScreen} options={{ title: 'Complaint' }} />
+            <Stack.Screen name="Admin" component={AdminScreen} options={{ title: 'Admin panel' }} />
           </>
         )}
       </Stack.Navigator>

@@ -44,7 +44,13 @@ router.patch('/me', async (req, res) => {
   if (b.bio !== undefined) u.bio = str(b.bio, 500);
   if (b.city !== undefined) u.city = str(b.city, 80);
   if (b.country !== undefined) u.country = str(b.country, 80);
-  if (b.phone !== undefined) u.phone = str(b.phone, 20);
+  if (b.phone !== undefined) {
+    const phone = str(b.phone, 20);
+    if (phone !== u.phone) {
+      u.phone = phone;
+      u.phoneVerified = false;
+    }
+  }
   if (b.avatar !== undefined) u.avatar = str(b.avatar, 500);
   if (b.statusNote !== undefined) u.statusNote = str(b.statusNote, 120);
   if (b.status !== undefined) {
@@ -82,7 +88,7 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/reviews', async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) throw new HttpError(404, 'User not found');
   const page = Math.max(1, Number(req.query.page) || 1);
-  const reviews = await Review.find({ provider: req.params.id })
+  const reviews = await Review.find({ provider: req.params.id, direction: { $ne: 'provider_to_client' } })
     .sort({ createdAt: -1 })
     .skip((page - 1) * 20)
     .limit(20)

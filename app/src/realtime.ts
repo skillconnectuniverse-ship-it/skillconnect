@@ -15,6 +15,8 @@ export function disconnectSocket() {
   socket = null;
 }
 
+export const getSocket = () => socket;
+
 // Subscribes to a realtime event for as long as the component is mounted.
 export function useSocketEvent<T = unknown>(event: string, handler: (payload: T) => void) {
   const ref = useRef(handler);

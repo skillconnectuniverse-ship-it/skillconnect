@@ -4,6 +4,7 @@ import { Booking, serializeBooking } from '../models/Booking.js';
 import { Payment } from '../models/Payment.js';
 import { Review } from '../models/Review.js';
 import { User } from '../models/User.js';
+import { LedgerEntry } from '../models/Ledger.js';
 import { requireAuth } from '../middleware/auth.js';
 import { notify } from '../services/notify.js';
 import { refundPayment } from '../services/payments.js';
@@ -37,6 +38,9 @@ async function pushUpdate(b, ...userIds) {
 }
 
 router.post('/', async (req, res) => {
+  if (config.requireEmailVerification && !req.user.emailVerified) {
+    throw new HttpError(403, 'Please verify your email before hiring');
+  }
   const { providerId, skillId } = req.body;
   const plan = String(req.body.plan);
   if (!PLANS.includes(plan)) throw new HttpError(400, 'Choose hourly, daily, monthly or yearly');
@@ -143,6 +147,17 @@ router.post('/:id/complete', async (req, res) => {
   if (!updated) throw new HttpError(409, 'Job is already finished');
 
   await User.updateOne({ _id: b.provider._id }, { $inc: { completedJobs: 1 } });
+  // Earnings stay pending for the hold period so disputes can still be raised.
+  await LedgerEntry.create({
+    user: b.provider._id,
+    kind: 'earning',
+    currency: b.currency,
+    amountMinor: updated.providerEarningMinor,
+    booking: b._id,
+    availableAt: new Date(Date.now() + config.payoutHoldHours * 3600 * 1000),
+    held: updated.disputeOpen,
+    note: `${b.skill.name} for ${b.client.name}`,
+  }).catch((e) => console.error('ledger credit failed', e.message));
   const data = { bookingId: String(b._id) };
   await Promise.all([
     notify(b.client._id, { type: 'booking_completed', title: 'Booking completed', body: `${b.provider.name} finished the work. Please rate your experience.`, data }),
@@ -190,7 +205,7 @@ router.post('/:id/review', async (req, res) => {
   if (b.status !== S.COMPLETED) throw new HttpError(409, 'You can review after the booking is completed');
   const rating = Math.floor(Number(req.body.rating));
   if (!(rating >= 1 && rating <= 5)) throw new HttpError(400, 'Rating must be 1 to 5');
-  if (await Review.exists({ booking: b._id })) throw new HttpError(409, 'Already reviewed');
+  if (await Review.exists({ booking: b._id, direction: 'client_to_provider' })) throw new HttpError(409, 'Already reviewed');
 
   const review = await Review.create({
     booking: b._id,
@@ -218,6 +233,51 @@ router.post('/:id/review', async (req, res) => {
     data: { bookingId: String(b._id) },
   });
   res.status(201).json({ review: { id: String(review._id), rating, comment: review.comment } });
+});
+
+// Hired person rates the client (reliability, behaviour, fair requests).
+router.post('/:id/review-client', async (req, res) => {
+  const { b, isProvider } = await loadForParticipant(req.params.id, req.user._id);
+  if (!isProvider) throw new HttpError(403, 'Only the hired person can rate the client');
+  if (b.status !== S.COMPLETED) throw new HttpError(409, 'You can rate after the booking is completed');
+  const rating = Math.floor(Number(req.body.rating));
+  if (!(rating >= 1 && rating <= 5)) throw new HttpError(400, 'Rating must be 1 to 5');
+  if (await Review.exists({ booking: b._id, direction: 'provider_to_client' })) throw new HttpError(409, 'Already rated');
+
+  await Review.create({
+    booking: b._id,
+    direction: 'provider_to_client',
+    client: b.client._id,
+    provider: b.provider._id,
+    skillName: b.skill.name,
+    rating,
+    comment: str(req.body.comment, 1000),
+  });
+  await Booking.updateOne({ _id: b._id }, { clientReviewed: true });
+  await User.updateOne({ _id: b.client._id }, [
+    { $set: { clientRatingSum: { $add: ['$clientRatingSum', rating] }, clientRatingCount: { $add: ['$clientRatingCount', 1] } } },
+    { $set: { clientRatingAvg: { $round: [{ $divide: ['$clientRatingSum', '$clientRatingCount'] }, 2] } } },
+  ]);
+  await notify(b.client._id, {
+    type: 'review',
+    title: `${b.provider.name} rated you ${rating} stars`,
+    body: str(req.body.comment, 120),
+    data: { bookingId: String(b._id) },
+  });
+  res.status(201).json({ ok: true });
+});
+
+// The hired person's app posts its position while a job is active so the client can follow along.
+router.post('/:id/location', async (req, res) => {
+  const { b, isProvider } = await loadForParticipant(req.params.id, req.user._id);
+  if (!isProvider) throw new HttpError(403, 'Only the hired person shares location');
+  if (![S.CONFIRMED, S.IN_PROGRESS].includes(b.status)) throw new HttpError(409, 'Booking is not active');
+  const ll = parseLatLng(req.body.lat, req.body.lng);
+  if (!ll) throw new HttpError(400, 'Invalid coordinates');
+  const at = new Date();
+  await Booking.updateOne({ _id: b._id }, { providerLocation: toPoint(ll), providerLocationAt: at });
+  emitToUser(b.client._id, 'booking:location', { bookingId: String(b._id), lat: ll.lat, lng: ll.lng, updatedAt: at });
+  res.json({ ok: true });
 });
 
 export default router;

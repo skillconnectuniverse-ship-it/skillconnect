@@ -4,6 +4,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
+  Verify: undefined;
+  Wallet: undefined;
+  Kyc: undefined;
+  Report: { bookingId?: string; userId?: string; name?: string };
+  Support: undefined;
+  Complaint: { complaintId: string };
+  Admin: undefined;
   Tabs: undefined;
   Profile: { userId: string };
   EditProfile: undefined;

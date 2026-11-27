@@ -61,18 +61,28 @@ export const api = {
   del: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 
+async function appendFile(form: FormData, field: string, uri: string, name: string) {
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(uri)).blob();
+    form.append(field, blob, `${name}.jpg`);
+  } else {
+    const ext = uri.split('.').pop()?.toLowerCase();
+    const type = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    form.append(field, { uri, name: `${name}.${ext || 'jpg'}`, type } as unknown as Blob);
+  }
+}
+
+// multipart POST with text fields and image files (used by KYC).
+export async function postForm<T>(path: string, fields: Record<string, string>, files: Record<string, string | undefined>): Promise<T> {
+  const form = new FormData();
+  Object.entries(fields).forEach(([k, v]) => form.append(k, v));
+  for (const [field, uri] of Object.entries(files)) if (uri) await appendFile(form, field, uri, field);
+  return request<T>(path, { method: 'POST', body: form });
+}
+
 export async function uploadImages(uris: string[]): Promise<string[]> {
   const form = new FormData();
-  for (const [i, uri] of uris.entries()) {
-    if (Platform.OS === 'web') {
-      const blob = await (await fetch(uri)).blob();
-      form.append('files', blob, `photo-${i}.jpg`);
-    } else {
-      const ext = uri.split('.').pop()?.toLowerCase();
-      const type = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-      form.append('files', { uri, name: `photo-${i}.${ext || 'jpg'}`, type } as unknown as Blob);
-    }
-  }
+  for (const [i, uri] of uris.entries()) await appendFile(form, 'files', uri, `photo-${i}`);
   const { urls } = await request<{ urls: string[] }>('/upload', { method: 'POST', body: form });
   return urls;
 }
