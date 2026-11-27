@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "SkillConnect",
+    "slug": "skillconnect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "skillconnect",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.skillconnect.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SkillConnect uses your location to find skilled people near you and to share your work location with the person you hire.",
+        "NSPhotoLibraryUsageDescription": "SkillConnect needs photo access so you can upload your profile and work photos."
+      }
+    },
+    "android": {
+      "package": "com.skillconnect.app",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-status-bar",
+      ["expo-location", { "locationWhenInUsePermission": "SkillConnect uses your location to find people near you and to share your work location with the person you hire." }],
+      ["expo-image-picker", { "photosPermission": "SkillConnect needs photo access so you can upload your profile and work photos." }],
+      "expo-notifications"
+    ]
+  }
+}
