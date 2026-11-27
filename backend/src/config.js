@@ -50,6 +50,8 @@ export const config = {
     from: env.MAIL_FROM || env.SMTP_USER || 'SkillConnect <no-reply@skillconnect.local>',
   },
   emailEnabled: !!env.SMTP_HOST,
+  // This account becomes admin only after it proves inbox ownership with the email code.
+  adminEmail: (env.ADMIN_EMAIL || '').trim().toLowerCase(),
   twilio: { sid: env.TWILIO_ACCOUNT_SID || '', token: env.TWILIO_AUTH_TOKEN || '', from: env.TWILIO_FROM || '' },
   smsEnabled: !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM),
   // Unverified emails can browse but cannot hire; defaults to on once SMTP is configured.

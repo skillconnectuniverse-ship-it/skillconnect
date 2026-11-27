@@ -70,6 +70,7 @@ router.post('/email/verify', requireAuth, async (req, res) => {
   const hit = await consumeCode(req.user._id, 'email', req.body.code);
   if (!hit || hit.target !== req.user.email) throw new HttpError(400, 'Invalid or expired code');
   req.user.emailVerified = true;
+  if (config.adminEmail && req.user.email === config.adminEmail) req.user.role = 'admin';
   await req.user.save();
   res.json({ user: privateUser(req.user) });
 });

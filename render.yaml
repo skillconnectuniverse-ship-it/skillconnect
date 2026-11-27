@@ -15,15 +15,17 @@ services:
       - key: ENCRYPTION_KEY
         generateValue: true
       - key: SMTP_HOST
-        sync: false
+        value: smtp.gmail.com
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_USER
-        sync: false
+        value: skillconnectuniverse@gmail.com
       - key: SMTP_PASS
         sync: false
       - key: MAIL_FROM
-        sync: false
+        value: SkillConnect <skillconnectuniverse@gmail.com>
+      - key: ADMIN_EMAIL
+        value: skillconnectuniverse@gmail.com
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN

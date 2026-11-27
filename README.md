@@ -40,7 +40,7 @@ Phone numbers are private: they are only returned to the two people in an active
 | Complaints / disputes | "Report a problem" on a booking (holds the provider's earnings) or "Report this user" on a profile. Both sides can reply in a thread; an admin decides: full refund, partial refund, release to provider, or dismiss. Refunds go back through Razorpay/Stripe and the provider's earnings are adjusted |
 | Admin panel | Profile -> Admin panel (admins only): dashboard, complaints, KYC review, payouts, users (ban/unban) |
 
-Make someone an admin (run once, pointing at your database):
+Make someone an admin: set `ADMIN_EMAIL` (already `skillconnectuniverse@gmail.com` in `render.yaml`). That person signs up in the app with that email and verifies the emailed code - the account becomes admin automatically. Or, once, against any database:
 
 ```bash
 cd backend && MONGODB_URI="<your atlas string>" npm run make-admin -- you@example.com
